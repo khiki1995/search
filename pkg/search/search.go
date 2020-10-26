@@ -46,6 +46,8 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 				}		
 				chanFiles <- fileResult
 			}(chanFiles, arrTxt, phrase)
+		}else {
+			chanFiles <- nil
 		}
 	}
 	for  i := 0; i < len(files); i++ {
