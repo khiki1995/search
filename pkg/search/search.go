@@ -16,9 +16,10 @@ type Result struct {
 }
 
 func All(ctx context.Context, phrase string, files []string) <-chan []Result {
-	ch := make(chan []Result)
-	chanFile := make(chan Result)
-	for _, path := range files {
+	ch := make(chan []Result, len(files))
+	chanFiles := make(chan []Result)
+	defer close(chanFiles)
+	for _, path := range files {	
 		path, err := filepath.Abs(path)
 		if err != nil {
 			log.Printf("Error with dirict, dir = %v", path)
@@ -35,21 +36,25 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 		data := string(buf[:read])
 		arrTxt := strings.Split(data,"\n")
 		if len(arrTxt) > 0 {
-			go func(ctx context.Context, chanFile chan Result, arrTxt []string, phrase string){
-				select {
-					case <-ctx.Done():
-						close(ch)
-					default:
-						var fileResult []Result
-						for line, str := range arrTxt {
-							if strings.Contains(str, phrase){	
-								result := Result{phrase, str , int64(line)+1, int64(strings.Index(str, phrase))+1,}
-								fileResult = append(fileResult, result)
-							}
-						}
-						ch <- fileResult
-				}
-			}(ctx, chanFile, arrTxt, phrase)
+			go func(chanFiles chan []Result, arrTxt []string, phrase string){
+				var fileResult []Result
+				for line, str := range arrTxt {
+					if strings.Contains(str, phrase){	
+						result := Result{phrase, str , int64(line)+1, int64(strings.Index(str, phrase))+1,}
+						fileResult = append(fileResult, result)
+					}
+				}		
+				chanFiles <- fileResult
+			}(chanFiles, arrTxt, phrase)
+		}
+	}
+	for  i := 0; i < len(files); i++ {
+		select {
+			case val := <- chanFiles:
+				ch <- val
+		}
+		if i+1 == len(files){
+			close(ch)
 		}
 	}
 	return ch
