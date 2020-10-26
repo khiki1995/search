@@ -17,6 +17,7 @@ type Result struct {
 
 func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	ch := make(chan []Result)
+	chanFile := make(chan Result)
 	for _, path := range files {
 		path, err := filepath.Abs(path)
 		if err != nil {
@@ -33,10 +34,11 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 		}
 		data := string(buf[:read])
 		arrTxt := strings.Split(data,"\n")
-		if len(arrTxt) > 0 { 
-			go func(ctx context.Context, ch chan []Result,arrTxt []string, phrase string){
+		if len(arrTxt) > 0 {
+			go func(ctx context.Context, chanFile chan Result, arrTxt []string, phrase string){
 				select {
 					case <-ctx.Done():
+						close(ch)
 					default:
 						var fileResult []Result
 						for line, str := range arrTxt {
@@ -47,7 +49,7 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 						}
 						ch <- fileResult
 				}
-			}(ctx, ch, arrTxt, phrase)
+			}(ctx, chanFile, arrTxt, phrase)
 		}
 	}
 	return ch
