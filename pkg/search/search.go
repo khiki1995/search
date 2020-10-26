@@ -27,19 +27,21 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 			log.Printf("Error with open file! error = %v", err)
 		}
 		buf := make([]byte,4096)
-		read, _ := file.Read(buf)
+		read, err := file.Read(buf) 
+		if err != nil {
+			log.Printf("Error in reading file! error = %v", err)
+		}
 		data := string(buf[:read])
 		arrTxt := strings.Split(data,"\n")
 		if len(arrTxt) > 0 { 
 			go func(ctx context.Context, ch chan []Result,arrTxt []string, phrase string){
 				select {
 					case <-ctx.Done():
-						close(ch)
 					default:
 						var fileResult []Result
 						for line, str := range arrTxt {
-							if strings.Contains(str, phrase){
-								result := Result{phrase, str, int64(line)+1, int64(strings.Index(str, phrase))+1,} 
+							if strings.Contains(str, phrase){	
+								result := Result{phrase, str , int64(line)+1, int64(strings.Index(str, phrase))+1,}
 								fileResult = append(fileResult, result)
 							}
 						}
