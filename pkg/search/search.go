@@ -117,8 +117,9 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 			ch <- result
 		} 
 	}(ctx, ch)
-
-	wg.Wait()
-	close(ch)
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()	
 	return ch
 }
