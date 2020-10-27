@@ -1,6 +1,7 @@
 package search
 
 import (
+	"io/ioutil"
 	"sync"
 	"path/filepath"
 	"log"
@@ -90,27 +91,32 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 }
 
 func Any(ctx context.Context, phrase string, files []string) <-chan Result {
-	ctx, cancel :=  context.WithCancel(ctx)
-	ch := make(chan Result, 1)
-	chFirst := make(chan Result)
-
+	ch := make(chan Result)
+	wg := sync.WaitGroup{}
+	result := Result{}
 	for i := 0; i < len(files); i++ {
-		go func(ctx context.Context, chFirst chan Result, phrase string, file string, lastGor bool) {
-			select {
-				case <-ctx.Done():
-					close(chFirst)
-				default:
-					res := FindAnyTextInFile(phrase, file)
-					if res != (Result{}) || lastGor{
-						chFirst <- res
-					}
+
+		data, _ := ioutil.ReadFile(files[i])
+
+		filetext := string(data)
+
+		if strings.Contains(filetext, phrase) {
+			res := FindAnyTextInFile(phrase, filetext)
+			if (Result{}) != res {
+				result = res
+				break
 			}
-		}(ctx, chFirst, phrase, files[i], i+1 == len(files))
-		
+		}
 	}
-	val := <-chFirst
-	cancel()
-	ch <- val
+	wg.Add(1)
+	go func(ctx context.Context, ch chan<- Result) {
+		defer wg.Done()
+		if (Result{}) != result {
+			ch <- result
+		} 
+	}(ctx, ch)
+
+	wg.Wait()
 	close(ch)
 	return ch
 }
