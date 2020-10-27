@@ -96,8 +96,10 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	result := Result{}
 	for i := 0; i < len(files); i++ {
 
-		data, _ := ioutil.ReadFile(files[i])
-
+		data, err := ioutil.ReadFile(files[i])
+		if err != nil {
+			log.Println("ошибка при открытии файла : ", err)
+		}
 		filetext := string(data)
 
 		if strings.Contains(filetext, phrase) {
