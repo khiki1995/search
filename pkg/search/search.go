@@ -95,17 +95,17 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	chFirst := make(chan Result)
 
 	for i := 0; i < len(files); i++ {
-		go func(ctx context.Context, chFirst chan Result, phrase string, file string) {
+		go func(ctx context.Context, chFirst chan Result, phrase string, file string, lastGor bool) {
 			select {
 				case <-ctx.Done():
 					close(chFirst)
 				default:
 					res := FindAnyTextInFile(phrase, file)
-					if res != (Result{}) {
+					if res != (Result{}) || lastGor {
 						chFirst <- res
 					}
 			}
-		}(ctx, chFirst, phrase, files[i])
+		}(ctx, chFirst, phrase, files[i], i+1 == len(files))
 		
 	}
 	val := <-chFirst
