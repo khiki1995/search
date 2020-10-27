@@ -100,13 +100,9 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 				case <-ctx.Done():
 					close(chFirst)
 				default:
-					res := FindAnyMatchTextInFile(phrase, file)
-					if res != (Result{}){
+					res := FindAnyTextInFile(phrase, file)
+					if res != (Result{}) || lastGor{
 						chFirst <- res
-					}else {
-						if lastGor {
-							chFirst <- Result{}
-						}
 					}
 			}
 		}(ctx, chFirst, phrase, files[i], i+1 == len(files))
@@ -117,27 +113,4 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	ch <- val
 	close(ch)
 	return ch
-}
-
-func FindAnyMatchTextInFile(phrase, filetext string) (res Result) {
-
-	//ch := make(chan Result)
-
-	temp := strings.Split(filetext, "\n")
-
-	for i, line := range temp {
-		//fmt.Println("[", i+1, "]\t", line)
-		if strings.Contains(line, phrase) {
-
-			return Result{
-				Phrase:  phrase,
-				Line:    line,
-				LineNum: int64(i + 1),
-				ColNum:  int64(strings.Index(line, phrase)) + 1,
-			}
-
-		}
-	}
-
-	return res
 }
